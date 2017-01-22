@@ -53,12 +53,30 @@ if (timeDiff <= DELAY * 2) {
     }
     console.log(reviewCount);
 
+    var url = document.URL;
+
+    if (url.search(/stackoverflow/) != -1) {
+        logo = 'https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-icon.png';
+    } else if (url.search(/serverfault/) != -1) {
+        logo = 'https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/sf/sf-icon.png';
+    } else if (url.search(/superuser/) != -1) {
+        logo = 'https:// cdn.sstatic.net/Sites/stackoverflow/company/img/logos/su/su-icon.png';
+    } else {
+        logo = url.replace('/review', '/favicon.ico');
+    }
+
     if (reviewCount > 0) {
         var details = {
             body: reviewCount + ' Review Items',
-            icon: 'https://github.com/malachi26/ReviewQueueNotifier/raw/master/Resources/Icon2.png'
-        }
+            tag: notificationTitle,
+            icon: logo,
+        };
         var n = new Notification(document.title.replace(' Stack Exchange', '.SE'), details );
         setTimeout(n.close.bind(n), 15000);
     }
 }
+
+
+
+
+
