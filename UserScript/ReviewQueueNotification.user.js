@@ -23,10 +23,11 @@
 Notification.requestPermission();
 
 var KEY_NEXT = 'NextReload';
-var DELAY =  600 * 1000; //60,000 milliseconds = 1 Minutes
+var DELAY =  60 * 1000; //60,000 milliseconds = 1 Minutes
 var currentTime = Date.now ? Date.now() : new Date().getTime();
 var lastTime = GM_getValue(KEY_NEXT, 0);
 var nextTime = currentTime + DELAY;
+var url = document.URL;
 GM_setValue(KEY_NEXT, nextTime);
 
 var timeDiff = Math.abs(lastTime - currentTime);
@@ -40,19 +41,21 @@ var notificationTitle = (document.title.split(' - ')[1] + ' Review Queue').repla
 if (timeDiff <= DELAY * 2) {
     var reviewCount = 0;
     var reviewItems = document.getElementsByClassName('dashboard-num');
+    var reviewMsg = '';
 
     for (var i = 0; i < reviewItems.length; i++){
         if (reviewItems[i].parentNode.className != 'dashboard-count dashboard-faded'){
             reviewTitle = reviewItems[i].parentNode.parentNode.getElementsByClassName('dashboard-title')[0].outerText;
-            if (reviewTitle != 'Documentation: Proposed Changes' && reviewTitle != 'Triage') {
-                reviewCount += parseInt((reviewItems[i].getAttribute("title")).replace(',', ''), 10);
+            if (reviewTitle != 'Documentation: Proposed Changes') {
+                reviewCount = parseInt((reviewItems[i].getAttribute("title")).replace(',', ''), 10);
+                if (reviewCount !== 0) {
+                    reviewMsg += reviewCount + ' in ' + reviewTitle + '\n';
+                }
             }
             console.log(reviewItems[i]);
         }
     }
-    console.log(reviewCount);
-
-    var url = document.URL;
+    console.log(reviewMsg);
 
     if (url.search(/stackoverflow/) != -1) {
         logo = 'https://cdn.sstatic.net/Sites/stackoverflow/company/img/logos/so/so-icon.png';
@@ -64,13 +67,28 @@ if (timeDiff <= DELAY * 2) {
         logo = url.replace('/review', '/favicon.ico');
     }
 
-    if (reviewCount > 0) {
+    if (reviewMsg !== '') {
+        var timestamp = new Date();
         var details = {
-            body: reviewCount + ' Review Items',
+            body: reviewMsg + timestamp.toTimeString().substring(0,8),
             tag: notificationTitle,
             icon: logo,
         };
-        var n = new Notification(notificationTitle, details );
-        setTimeout(n.close.bind(n), 100000); // Magic number is time to notification disappear
+        make_notification = function() {
+            var n = new Notification(notificationTitle, details);
+            n.onclick = function(event) {
+                window.focus();
+            };
+            n.onclose = function() {
+                GM_setValue(KEY_NEXT, nextTime + 1);
+            };
+            var currentTime = Date.now ? Date.now() : new Date().getTime();
+            if (Math.abs(currentTime - lastTime) < DELAY / 2) {
+                if (GM_getValue(KEY_NEXT, 0) == nextTime) {
+                    setTimeout(make_notification, 3500);
+                }
+            }
+        };
+        make_notification();
     }
 }
