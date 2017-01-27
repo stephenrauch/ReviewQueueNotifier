@@ -1,13 +1,15 @@
 /** @preserve
 // ==UserScript==
-// @name Review Queue Notification
+// @name Review Queue Notification w/o Triage/Docs
 // @author Malachi with help from Simon Forsberg
 // @description Shows a desktop notification when there review items in the queue.
 // @namespace https://github.com/malachi26/ReviewQueueNotifier
-// @version 2.2.1
+// @version 2.2.1x
 // @grant GM_getValue
 // @grant GM_setValue
 // @grant GM_notification
+// @grant GM_registerMenuCommand
+// @grant GM_unregisterMenuCommand
 // @grant Notifications
 // @match *://*.stackexchange.com/review
 // @match *://*.stackoverflow.com/review
@@ -19,7 +21,6 @@
 // @icon https://github.com/malachi26/ReviewQueueNotifier/raw/master/Resources/Icon2.jpg
 // ==/UserScript==
 */
-
 Notification.requestPermission();
 
 var KEY_NEXT = 'NextReload';
@@ -35,6 +36,34 @@ setTimeout(function(){
     window.location.reload();
 }, DELAY);
 
+var TRIAGE_ON_KEY = 'TriageOnKey';
+var triageOnMenuMsg = 'Turn On Triage Notifications';
+var triageOffMenuMsg = 'Turn Off Triage Notifications';
+
+function triageOn() {
+    GM_unregisterMenuCommand(GM_registerMenuCommand(
+        triageOnMenuMsg, triageOn, 'r'));
+    GM_registerMenuCommand(triageOffMenuMsg, triageOff, 'r');
+    if (! GM_getValue(TRIAGE_ON_KEY, 1)) {
+        window.location.reload();
+        GM_setValue(TRIAGE_ON_KEY, 1);
+    }
+}
+function triageOff() {
+    GM_unregisterMenuCommand(GM_registerMenuCommand(
+        triageOffMenuMsg, triageOff, 'r'));
+    GM_registerMenuCommand(triageOnMenuMsg, triageOn, 'r');
+    if (GM_getValue(TRIAGE_ON_KEY, 1)) {
+        window.location.reload();
+        GM_setValue(TRIAGE_ON_KEY, 0);
+    }
+}
+if (GM_getValue(TRIAGE_ON_KEY, 1)) {
+    triageOn();
+} else {
+    triageOff();
+}
+
 var notificationTitle = (document.title.split(' - ')[1] + ' Review Queue').replace(' Stack Exchange', '.SE');
 
 // a way to detect that the script is being executed because of an automatic script reload, not by the user.
@@ -46,7 +75,9 @@ if (timeDiff <= DELAY * 2) {
     for (var i = 0; i < reviewItems.length; i++){
         if (reviewItems[i].parentNode.className != 'dashboard-count dashboard-faded'){
             reviewTitle = reviewItems[i].parentNode.parentNode.getElementsByClassName('dashboard-title')[0].outerText;
-            if (reviewTitle != 'Documentation: Proposed Changes') {
+
+            //if (reviewTitle != 'Documentation: Proposed Changes' || GM_getValue(TRIAGE_ON_KEY, 0)) {
+            if (reviewTitle != 'Documentation: Proposed Changes' && (GM_getValue(TRIAGE_ON_KEY, 0) || reviewTitle != 'Triage')) {
                 reviewCount = parseInt((reviewItems[i].getAttribute("title")).replace(',', ''), 10);
                 if (reviewCount !== 0) {
                     reviewMsg += reviewCount + ' in ' + reviewTitle + '\n';
